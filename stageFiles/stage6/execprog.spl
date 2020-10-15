@@ -1,0 +1,2 @@
+R0="exception";
+print R0;

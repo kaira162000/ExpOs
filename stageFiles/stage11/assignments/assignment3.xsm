@@ -1,0 +1,27 @@
+sub SP,5
+mov R0,[SP]
+add SP,5
+mov R1,"Write"
+eq R0,R1
+jz R0,48
+sub SP,4
+mov R0,[SP]
+add SP,4
+mov R1,-2
+eq R1,R0
+jz R1,48
+sub SP,5
+mov [SP],5
+add SP,5
+pop R0
+sub SP,5
+mov [SP],R0
+add SP,5
+int 7
+sub SP,5
+mov R0,[SP]
+add SP,5
+push R0
+ret
+
+

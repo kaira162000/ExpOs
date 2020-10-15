@@ -1,0 +1,6 @@
+MOV R0, "exited"
+MOV R16, R0
+PORT P1, R16
+OUT
+HALT
+HALT

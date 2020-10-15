@@ -1,0 +1,8 @@
+load --os ../Assignments/Stage12/os_startup.xsm
+load --int=10 ../Assignments/Stage6/haltprog.xsm
+load --exhandler ../Assignments/Stage12/haltprog.xsm
+load --init ../Assignments/Stage12/print1to50.xsm
+load --int=7 ../Assignments/Stage10/int7.xsm
+load --int=timer ../Assignments/Stage12/sample_timer.xsm
+load --library ../expl/library.lib
+load --idle ../Assignments/Stage12/idle.xsm

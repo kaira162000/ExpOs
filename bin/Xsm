@@ -1,0 +1,11 @@
+#!/bin/bash
+
+xsm_dir=$OS_LAB_PROJ_DIR/"myexpos/xsm"
+xfs_dir=$OS_LAB_PROJ_DIR/"myexpos/xfs-interface"
+
+mv disk.xfs $xfs_dir
+wd=`pwd`
+cd $xsm_dir
+./xsm "$@"
+cd $wd
+rm $xfs_dir/disk.xfs

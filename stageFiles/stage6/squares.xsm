@@ -1,0 +1,15 @@
+mov R0,1
+mov R1,6
+mov R2,0
+mov R3,R0
+ge R3,R1
+jnz R3,2070
+mov R3,R0
+mul R3,R3
+BRKP
+add R0,1
+jmp 2054
+int 10
+
+
+

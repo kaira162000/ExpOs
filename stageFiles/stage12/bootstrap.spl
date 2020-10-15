@@ -1,0 +1,139 @@
+//loading idle process from disk to memory
+loadi(69,11);
+loadi(70,12);
+
+//loading the INT7 routine code from disk to memory
+loadi(16,29);
+loadi(17,30);
+
+//loading timerInterrupt code from disk to memory
+loadi(4, 17);
+loadi(5, 18);
+
+//loading the library code from disk, 13 and 14 block content, to memory, 63 and 64 pages.
+
+loadi(63,13);
+loadi(64,14);
+
+//loading init program code from 7,8 disk blocks to 65,66 pages of memory.
+loadi(65,7);
+loadi(66,8);
+
+//loading int10 routine
+loadi(22,35);
+loadi(23,36);
+
+//loading exception handler routine
+loadi(2,15);
+loadi(3,16);
+
+PTBR=PAGE_TABLE_BASE;
+PTLR=10;
+
+//setting up the page table of idle process
+
+//since idle process process doesn't use any library funs, no need to map library
+//code with logical pages 0 and 1
+
+[PTBR+0]=63;
+[PTBR+1]="0100";
+[PTBR+2]=64;
+[PTBR+3]="0100";
+
+//since idle process doesn't use heap,no need to set heap area
+//heap
+[PTBR+4]=-1;
+[PTBR+5]="0000";
+[PTBR+6]=-1;
+[PTBR+7]="0000";
+
+//since code of idle process is small, two pages would be more than enough
+[PTBR+8]=69;
+[PTBR+9]="0100";
+[PTBR+10]=70;
+[PTBR+11]="0100";
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+//stack
+[PTBR+16]=81;
+[PTBR+17]="0110";
+[PTBR+18]=-1;
+[PTBR+19]="0110";
+
+[81*512]=[69 * 512 + 1];
+
+//setting up the page table of init program
+
+//mapping the shared library contents to logical pages 0 and 1
+
+PTBR=PAGE_TABLE_BASE+20;
+PTLR=10;
+
+[PTBR+0]=63;
+[PTBR+1]="0100";
+[PTBR+2]=64;
+[PTBR+3]="0100";
+
+//heap
+[PTBR+4]=78;
+[PTBR+5]="0110";
+[PTBR+6]=79;
+[PTBR+7]="0110";
+
+//code
+[PTBR+8]=65;
+[PTBR+9]="0100";
+[PTBR+10]=66;
+[PTBR+11]="0100";
+[PTBR+12] = -1;
+[PTBR+13] = "0000";
+[PTBR+14] = -1;
+[PTBR+15] = "0000";
+
+//stack
+[PTBR+16]=76;
+[PTBR+17]="0110";
+[PTBR+18]=77;
+[PTBR+19]="0110";
+
+[76*512]=[65 * 512 + 1];
+SP=8*512;
+
+//Making entry of values in the process table
+
+//userAreaPageNumber for idle process
+[PROCESS_TABLE+11]=82;
+//userAreaPageNumber for init process
+[PROCESS_TABLE+16+11]=80;
+
+//PID for idle process
+[PROCESS_TABLE+1]=0;
+//PID for init process
+[PROCESS_TABLE+16+1]=1;
+
+//setting up states of the processes
+[PROCESS_TABLE+4]=(RUNNING) ;
+[PROCESS_TABLE+16+4]=(CREATED);
+
+//setting up UPTR values for the processes
+//logical addresses are stored
+[PROCESS_TABLE+13]=8*512;
+[PROCESS_TABLE+16+13]=8*512;
+
+//setting up the KPTR values-we only store offset values
+[PROCESS_TABLE+12]=0;
+[PROCESS_TABLE+16+12]=0;
+
+//setting up PTBR and PTLR
+[PROCESS_TABLE+14]=PAGE_TABLE_BASE;
+[PROCESS_TABLE+15]=10;
+[PROCESS_TABLE+16+14]=PAGE_TABLE_BASE+20;
+[PROCESS_TABLE+16+15]=10;
+//Setting up entries in the systemStatusTable
+
+//pid
+[SYSTEM_STATUS_TABLE+1]=1;
+ireturn;

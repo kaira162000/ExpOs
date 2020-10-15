@@ -1,0 +1,10 @@
+#!/bin/bash
+
+spl_dir=$OS_LAB_PROJ_DIR/"myexpos/spl"
+
+wd=`pwd`
+file=$wd/$1
+
+cd $spl_dir
+./spl $file
+cd $wd

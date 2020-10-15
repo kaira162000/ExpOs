@@ -1,0 +1,38 @@
+decl
+	int isPrime(int n);
+enddecl
+
+int isPrime(int n)
+{
+	decl
+		int counter, retval;
+	enddecl
+	begin
+		retval = 1;
+		counter = 2;
+		while ((n/counter) > counter) do
+			if ((n%counter) == 0) then
+				retval = 0;
+			endif;
+			counter = counter + 1;
+		endwhile;
+		return retval;
+	end
+}
+
+int main()
+{
+decl
+    int temp,num;
+enddecl
+begin
+    num=1;
+    while ( num <= 100 ) do
+    	if (isPrime(num) == 1) then
+        	temp = exposcall ( "Write" , -2, num );
+	endif;
+        num = num + 1;
+    endwhile;
+    return 0;
+end
+}

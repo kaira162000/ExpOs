@@ -1,0 +1,45 @@
+//aliasing the starting address of process table entry of current process-0
+alias PTentry R0;
+PTentry=PROCESS_TABLE+[SYSTEM_STATUS_TABLE+1]*16;
+
+//changing the mode flag of the process to system call number
+[PTentry+9]=5;
+
+alias userSP R1;
+userSP=SP;
+
+//storing userstack address in it's processtable
+[PTentry+13]=userSP;
+
+//set SP to beginning of it's kernel stack
+SP=[PTentry+11]*512-1;
+
+//accessing the contents,pushed by user programmer,in the user stack
+//Since PTentry has logical address of userstack, we need to convert it into
+//physical address and access contents in it
+
+alias PhysicalPageNum R2;
+alias offset R3;
+alias FileDescPhysicalAddress R4;
+alias FileDescriptor R5;
+
+//accessing file descriptor value from userstack
+PhysicalPageNum=[PTBR+2*((userSP-4)/512)];
+offset=(userSP-4)%512;
+FileDescPhysicalAddress=(PhysicalPageNum)*512+offset;
+FileDescriptor=[FileDescPhysicalAddress];
+
+//checking whether filedescriptor value is valied or not
+//only checking for terminal here
+if(FileDescriptor==-2)
+then
+	alias word R5;	
+	[FileDescPhysicalAddress+3]=0;
+	word=[FileDescPhysicalAddress+1];
+	print word;	
+else
+	[FileDescPhysicalAddress+3]=-1;
+endif;
+SP=userSP;
+[PTentry+9]=0;
+ireturn;

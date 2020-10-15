@@ -1,0 +1,18 @@
+alias functionNum R1;
+alias currentPID R2;
+
+if (functionNum == 3) then
+	//Calling Acquire Terminal
+	multipush(R1, R2);
+	functionNum = 8;
+	call RESOURCE_MANAGER;
+	multipop(R1, R2);
+	print R3;
+	//Calling Restore Terminal
+	multipush(R1, R2);
+	R1 = 9;
+	call RESOURCE_MANAGER;
+	multipop(R1, R2);
+endif;
+return;
+
