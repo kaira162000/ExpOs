@@ -1,0 +1,36 @@
+alias functionNum R1;
+alias currentPID R2;
+
+//Acquire Terminal
+if (functionNum == 8) then
+	while ([TERMINAL_STATUS_TABLE] == 1) do
+		[PROCESS_TABLE + currentPID*16 + 4] = WAIT_TERMINAL;
+		multipush(R1, R2);
+		call SCHEDULER;
+		multipop(R1, R2);
+	endwhile;
+	[TERMINAL_STATUS_TABLE] = 1;
+	[TERMINAL_STATUS_TABLE + 1] = currentPID;
+	return;
+endif;
+
+//Restore Terminal
+if (functionNum == 9) then
+	if (currentPID != [TERMINAL_STATUS_TABLE + 1]) then
+		R0 = -1;
+		return;
+	endif;
+	[TERMINAL_STATUS_TABLE] = 0;
+	alias counter R3;
+	counter = 0;
+	while (counter < 16) do
+		if ([PROCESS_TABLE + counter*16 + 4] == WAIT_TERMINAL) then
+			[PROCESS_TABLE + counter*16 + 4] = READY;
+		endif;
+		counter = counter + 1;
+	endwhile;
+	R0 = 0;
+	return;
+endif;
+
+return;

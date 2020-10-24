@@ -1,0 +1,39 @@
+alias currentPID R0;
+alias userSP R1;
+alias PTable R2;
+alias FileDesc R3;
+alias VarAddr R4;
+alias temp R5;
+alias returnAddr R6;
+
+currentPID=[SYSTEM_STATUS_TABLE + 1];
+PTable=PROCESS_TABLE+16*currentPID;
+[PTable+9]=7;
+[PTable+13]=SP;
+
+userSP=SP;
+
+SP=[PTable+11]*512-1;
+returnAddr= [PAGE_TABLE_BASE + 2*((userSP - 1)/512)+(20*currentPID)]*512 + ((userSP - 1)%512);
+FileDesc = [[PAGE_TABLE_BASE + 2*((userSP-4)/512)+(20*currentPID)]*512 + ((userSP - 4)%512)];
+VarAddr=[[PAGE_TABLE_BASE + 2*((userSP-3)/512)+(20*currentPID)]*512 + ((userSP - 3)%512)];
+if(FileDesc!=-1) then
+	[returnAddr]=-1;
+
+else
+	multipush(R0,R1,R2,R3,R4,R5,R6);
+	R1=4;
+	R2=currentPID;
+	R3=VarAddr;
+	call DEVICE_MANAGER;	
+	multipop(R0,R1,R2,R3,R4,R5,R6);
+	[returnAddr]=0;
+endif;
+
+[PTable+9]=0;
+SP=userSP;
+ireturn;	
+
+
+	
+

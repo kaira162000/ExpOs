@@ -54,4 +54,4 @@ expl idle.expl
 xi load --idle idle.xsm
 rm idle.xsm
 
-Xsm --debug
+Xsm --debug 
