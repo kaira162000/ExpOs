@@ -20,10 +20,17 @@
 - [x] Stage 13 : Boot Module :heavy_check_mark:
 - [x] Stage 14 : Round Robin Scheduler :heavy_check_mark:
 - [x] Stage 15 : Resource Manager Module :heavy_check_mark:
+<<<<<<< HEAD
 - [x] Stage 16 : Console Input 
 - [x] Stage 17 : Program Loader
 - [x] Stage 18 : Disk Interrupt Handler
 - [x] Stage 19 : Exception Handler
+=======
+- [X] Stage 16 : Console Input :heavy_check_mark:
+- [X] Stage 17 : Program Loader:heavy_check_mark:
+- [X] Stage 18 : Disk Interrupt Handler:heavy_check_mark:
+- [X] Stage 19 : Exception Handler:heavy_check_mark:
+>>>>>>> a92780a496117e29e5c1f71e5a2b420e389ad4d8
 
 ##### Final Stages
 - [ ] Stage 20 : Process Creation and Termination
