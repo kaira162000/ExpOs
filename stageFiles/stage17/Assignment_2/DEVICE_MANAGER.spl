@@ -1,0 +1,36 @@
+alias functionNum R1;
+alias currentPID R2;
+
+if (functionNum == 3) then
+	//Calling Acquire Terminal
+	multipush(R1, R2, R3);
+	functionNum = 8;
+	call RESOURCE_MANAGER;
+	multipop(R1, R2, R3);
+	print R3;
+	//Calling Restore Terminal
+	multipush(R1, R2, R3);
+	R1 = 9;
+	call RESOURCE_MANAGER;
+	multipop(R1, R2, R3);
+endif;
+if (functionNum == 4) then
+	//Calling Acquire Terminal
+	multipush(R1, R2, R3);
+	functionNum = 8;
+	call RESOURCE_MANAGER;
+	multipop(R1, R2, R3);
+	read;
+
+	//Scheduling next Process while waiting
+	[PROCESS_TABLE + 16*currentPID + 4] = WAIT_TERMINAL;
+	multipush(R1, R2, R3);
+	call SCHEDULER;
+	
+	//After return from scheduler
+	multipop(R1, R2, R3);
+	//R3 contains logical address of return variable
+	[[PTBR + 2*(R3/512)]*512 + R3%512] = [PROCESS_TABLE + currentPID*16 + 8];
+endif;
+return;
+

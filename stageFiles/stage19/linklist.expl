@@ -1,0 +1,43 @@
+type
+        linkedlist
+        {
+                int num;
+                linkedlist next;
+        }
+endtype
+
+decl
+linkedlist start,temp2,temp3;
+enddecl
+
+int main()
+{
+decl
+   	int temp, n, temp1,i;
+enddecl
+
+begin
+	temp = exposcall("Write", -2, "Enter n: ");
+	temp = exposcall ("Read" , -1, n);
+	temp = exposcall("Write", -2, "Enter num: ");
+	temp=initialize();
+	start=alloc();
+	temp2=start;
+	i=0;
+	while(i<n) do
+		temp1 = exposcall ("Read" , -1, temp2.num);
+		temp2.next=alloc();
+		temp3=temp2;
+		temp2=temp2.next;
+		i=i+1;
+	endwhile;
+	temp3.next=null;
+	temp = exposcall("Write", -2, "Entered num: ");
+	temp=0;
+	while(start!=null) do
+		temp1=exposcall("Write", -2, start.num);
+		start=start.next;
+	endwhile;
+	return 0;
+end
+}

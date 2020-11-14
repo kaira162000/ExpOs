@@ -1,0 +1,124 @@
+//Setting Mode Flag
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 9;
+
+//Saving userSP
+alias userSP R0;
+userSP = SP;
+//Changing User stack to kernel Stack
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 13] = SP;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 11]*512 - 1;
+
+alias fileName R1;
+alias counter R2;
+alias inodeIndex R3;
+//Arg 1
+fileName = [[PTBR + 2*((userSP - 4)/512)]*512 + (userSP - 4)%512];
+counter = 0;
+inodeIndex = -1;
+//Checking if file is present
+while (counter < MAX_FILE_NUM) do
+	if([INODE_TABLE + counter*16 + 1] == fileName) then
+		inodeIndex = counter;	
+		break;
+	endif;
+	counter = counter + 1;
+endwhile;
+if((inodeIndex == -1) || ([INODE_TABLE + counter*16 + 0] != EXEC)) then
+	//Return Value
+	[[PTBR + 2*((userSP - 1)/512)]*512 + (userSP - 1)%512] = -1;
+	//Mode Flag
+	[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 0;
+	SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 13];
+	ireturn;
+endif;
+
+//Calling Exit Function
+multipush(R0, R1, R2, R3);
+R1 = 3;
+R2 = [SYSTEM_STATUS_TABLE + 1];
+call PROCESS_MANAGER;
+multipop(R0, R1, R3, R3);
+
+//Setting User Area Page again
+alias userAreaPage R2;
+alias PID R4;
+PID = [SYSTEM_STATUS_TABLE + 1];
+userAreaPage = [PROCESS_TABLE + PID*16 + 11];
+[MEMORY_FREE_LIST + userAreaPage] = [MEMORY_FREE_LIST + userAreaPage] + 1;
+//Decrement MEM_FREE_COUNT
+[SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] - 1;
+//Reinitialize SP
+SP = userAreaPage*512 - 1;
+[PROCESS_TABLE + PID*16 + 4] = RUNNING;
+[PROCESS_TABLE + PID*16 + 7] = inodeIndex;
+
+//Setting Page Table
+PTBR = PAGE_TABLE_BASE + PID*20;
+//Library
+[PTBR+0] = 63;
+[PTBR+1] = "0100";
+[PTBR+2] = 64;
+[PTBR+3] = "0100";
+
+//Heap
+multipush(R3, R4);
+R1 = 1;
+call MEMORY_MANAGER;
+multipop(R3, R4);
+
+[PTBR+4] = R0;
+[PTBR+5] = "0110";
+
+multipush(R3, R4);
+R1 = 1;
+call MEMORY_MANAGER;
+multipop(R3, R4);
+
+[PTBR+6] = R0;
+[PTBR+7] = "0110";
+
+//Code
+alias counter R5;
+counter = 0;
+while (counter < 4) do
+	if(([INODE_TABLE + inodeIndex*16 + 8 + counter]) == -1) then
+		[PTBR + 2*(4+counter)] = -1;
+		[PTBR + 2*(4+counter) + 1] = "0000"; 
+		counter = counter + 1;
+		continue;
+	endif;
+
+	multipush(R3, R4, R5);
+	R1 = 1;
+	call MEMORY_MANAGER;
+	multipop(R3, R4, R5);
+	
+	loadi(R0, ([INODE_TABLE + inodeIndex*16 + 8 + counter]));
+	[PTBR + 2*(4+counter)] = R0;
+	[PTBR + 2*(4+counter) + 1] = "0100"; 
+
+	counter = counter + 1;
+endwhile;
+
+//Stack
+multipush(R3, R4);
+R1 = 1;
+call MEMORY_MANAGER;
+multipop(R3, R4);
+
+[PTBR+16] = R0;
+[PTBR+17] = "0110";
+
+multipush(R3, R4);
+R1 = 1;
+call MEMORY_MANAGER;
+multipop(R3, R4);
+
+[PTBR+18] = R0;
+[PTBR+19] = "0110";
+
+[[PTBR+16]*512] = [[PTBR+8] * 512 + 1];
+
+SP = 8*512;
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 0;
+ireturn;

@@ -1,0 +1,89 @@
+[PROCESS_TABLE+16*[SYSTEM_STATUS_TABLE+1]+9]=-1;
+[PROCESS_TABLE+16*[SYSTEM_STATUS_TABLE+1]+13]=SP;
+SP=[PROCESS_TABLE+16*[SYSTEM_STATUS_TABLE+1]+11]*512-1;
+backup;
+multipush(EIP);
+
+alias PID R0;
+PID=[SYSTEM_STATUS_TABLE+1];
+
+if(SP == (PTLR*512-1))  then
+	R1=3;
+        R2=R0;
+	R3="userstack full";
+	multipush(R0);
+	call DEVICE_MANAGER;
+	multipop(R0);
+	multipush(R0);
+	R1=3;
+	R2=PID;
+	call PROCESS_MANAGER;
+	multipop(R0);
+	restore;
+	call SCHEDULER;
+	ireturn;
+endif;
+
+if(EC == 0) then
+	if(EPN ==2 || EPN == 3) then
+		print("allo. heap");
+		alias counter R1;
+		counter=0;
+		while(counter<4) do
+			multipush(R0,R1);
+			R1 = 1;
+			call MEMORY_MANAGER;
+			R6=R0;
+			multipop(R0,R1);
+			[PAGE_TABLE_BASE+20*PID+4+counter] = R6;
+			[PAGE_TABLE_BASE+20*PID+5+counter] = "1110";
+			counter=counter+2;
+		endwhile;
+	else
+		print("allo. code.");
+		multipush(R0);
+                R1 = 5;
+                R2 = [DISK_MAP_TABLE+EPN+10*PID];
+        	call MEMORY_MANAGER;
+        	R6=R0;
+        	multipop(R0);
+		[PAGE_TABLE_BASE+20*PID+2*EPN]=R6;
+		[PAGE_TABLE_BASE+20*PID+2*EPN+1]="1100";
+	endif;
+	
+	[PROCESS_TABLE+16*[SYSTEM_STATUS_TABLE+1]+9]=0;
+	multipop(EIP);
+	restore;
+	SP=[PROCESS_TABLE+16*[SYSTEM_STATUS_TABLE+1]+13];
+	SP=SP+1;
+	[[PAGE_TABLE_BASE+20*[SYSTEM_STATUS_TABLE+1]+2*(SP/512)]*512+(SP%512)]=EIP;
+	ireturn;
+
+else
+	R1=3;
+	R2=R0;
+	if(EC == 1) then
+		R3="ill. mem. acc.";
+	endif;
+
+	if(EC == 2) then
+		R3="ill. inst.";
+	endif;
+
+	if(EC == 3) then
+		R3="arth. ins.";
+	endif;
+
+	multipush(R0);
+	call DEVICE_MANAGER;
+	multipop(R0);
+
+	multipush(R0);
+	R1=3;
+	R2=PID;
+	call PROCESS_MANAGER;
+	multipop(R0);
+	restore;
+	call SCHEDULER;
+	ireturn;
+endif;

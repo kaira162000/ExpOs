@@ -1,0 +1,38 @@
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 5;
+alias userSP R0;
+userSP = SP;
+
+//Changing User stack to kernel Stack
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 13] = SP;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 11]*512 - 1;
+
+alias physicalPageNum R1;
+alias offset R2;
+alias fileDescPhysicalAddr R3;
+physicalPageNum = [PTBR + 2*((userSP-4)/512)];
+offset = (userSP - 4)%512;
+fileDescPhysicalAddr = (physicalPageNum*512) + offset;
+alias fileDescriptor R4;
+fileDescriptor = [fileDescPhysicalAddr];
+
+//Return value
+alias phyAddrRetValue R5;
+phyAddrRetValue = [PTBR + 2*((userSP - 1)/512)]*512 + (userSP - 1)%512;
+
+if(fileDescriptor != -2)
+then
+	[phyAddrRetValue] = -1;
+else
+	multipush(R0, R1, R2, R3, R4, R5);
+	//Terminal Write Function number
+	R1 = 3;
+	R2 = [SYSTEM_STATUS_TABLE + 1];
+	//userSP can still be used since R0 is not overwritten
+	R3 = [[PTBR + 2*((userSP - 3)/512)]*512 + (userSP - 3)%512];
+	call DEVICE_MANAGER;
+	multipop(R0, R1, R2, R3, R4, R5);
+	[phyAddrRetValue] = 0;
+endif;
+SP = userSP;
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 0;
+ireturn;
