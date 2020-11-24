@@ -1,4 +1,3 @@
-BRKP
 MOV R16, 28672
 MOV R17, 16
 MOV R18, 29560
@@ -185,6 +184,7 @@ MOV R2, R0
 MOV R16, 1
 EQ R16, EC
 JZ R16, _L9
+BRKP
 MOV R3, "ill. mem. acc."
 JMP _L10
 _L9:

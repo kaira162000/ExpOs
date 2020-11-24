@@ -1,0 +1,147 @@
+[PROCESS_TABLE+16*[SYSTEM_STATUS_TABLE+1]+9] = 8;
+[PROCESS_TABLE+16*[SYSTEM_STATUS_TABLE+1]+13] = SP;
+SP = [PROCESS_TABLE+16*[SYSTEM_STATUS_TABLE+1]+11]*512+[PROCESS_TABLE+16*[SYSTEM_STATUS_TABLE+1]+12];
+//calling getPCBentry function
+R1 = 1;
+call PROCESS_MANAGER;
+
+alias newPID R0;
+
+//if already 16 processes are running
+if (newPID == -1) then
+	[PROCESS_TABLE+16*[SYSTEM_STATUS_TABLE+1]+9] = 0;
+	SP = [PROCESS_TABLE+16*[SYSTEM_STATUS_TABLE+1]+13];
+	R1 = SP;
+	R1 = R1 - 1;
+	[[PAGE_TABLE_BASE + 20*[SYSTEM_STATUS_TABLE+1] + (R1/512)*2] + (R1%512)] = -1;
+	ireturn;
+endif;
+
+alias PID R1;
+PID = [SYSTEM_STATUS_TABLE+1];
+
+//allocating heap pages for parent process, if not allocated already
+alias counter R2;
+counter = 2;
+if([PAGE_TABLE_BASE+20*PID+2]==-1) then
+	while(counter<4) do
+		multipush(R0,R1,R2);
+		R1=1;
+		call MEMORY_MANAGER;	
+		R3 = R0;
+		multipop(R0,R1,R2);
+		[PAGE_TABLE_BASE+20*PID+2*counter]=R3;
+		[PAGE_TABLE_BASE+20*PID+2*counter+1]="0110";
+		counter = counter+1;
+	endwhile;
+endif;
+
+//allocating two stack and one USER_AREA_PAGE to the child process
+counter=8;
+while(counter<10) do
+	multipush(R0,R1,R2);
+        R1=1;
+        call MEMORY_MANAGER;
+        R3 = R0;
+        multipop(R0,R1,R2);
+        [PAGE_TABLE_BASE+20*newPID+2*counter]=R3;
+	[PAGE_TABLE_BASE+20*newPID+2*counter+1]="0110";
+        counter = counter+1;
+endwhile;
+
+multipush(R0,R1,R2);
+R1=1;
+call MEMORY_MANAGER;
+R3 = R0;
+multipop(R0,R1,R2);
+[PROCESS_TABLE+16*newPID+11] = R3;
+[PROCESS_TABLE+16*newPID+12] = 0;
+
+//setting up the process table of the new child process
+//TICK
+[PROCESS_TABLE+16*newPID+0] = 0;
+//PID already initialised by getPCBentry function in PROCESS_MANGER
+//PPID
+[PROCESS_TABLE+16*newPID+2] = PID;
+//user ID
+[PROCESS_TABLE+16*newPID+3] = [PROCESS_TABLE+16*PID+3];
+//state
+[PROCESS_TABLE+16*newPID+4] = CREATED;
+//swap flag
+[PROCESS_TABLE+16*newPID+6] = [PROCESS_TABLE+16*PID+6];
+//inode index
+[PROCESS_TABLE+16*newPID+7] = [PROCESS_TABLE+16*PID+7];
+//no need to set input buffer
+//mode flag
+[PROCESS_TABLE+16*newPID+9] = 0;
+//user area swap status
+[PROCESS_TABLE+16*newPID+10] = [PROCESS_TABLE+16*PID+10];
+//UPTR
+[PROCESS_TABLE+16*newPID+13] = [PROCESS_TABLE+16*PID+13];
+//PTLR and PTBR already initialised by getPDBentry function in PROCESS_MANAGER
+
+//copying per-process resource table content of parent to new child process
+alias ppid_kptr R2;
+alias cpid_kptr R3;
+
+ppid_kptr = ([PROCESS_TABLE+16*PID+11]+1)*512-1;
+cpid_kptr = ([PROCESS_TABLE+16*newPID+11]+1)*512-1;
+
+alias counter R4;
+counter = 0;
+while(counter < 16) do
+	[cpid_kptr]=[ppid_kptr];
+	cpid_kptr = cpid_kptr - 1;
+	ppid_kptr = ppid_kptr - 1;
+	counter = counter+1;
+endwhile;
+
+//copying contents of per-process disk map table of parent to new child process
+counter = 0;
+while(counter<10) do
+	[DISK_MAP_TABLE+newPID*10+counter]=[DISK_MAP_TABLE+PID*10+counter];
+	counter = counter+1;	
+endwhile;
+
+//initialising the pagetable of new child process
+counter = 0;
+while(counter<8) do
+	[PAGE_TABLE_BASE+20*newPID+2*counter]=[PAGE_TABLE_BASE+20*PID+2*counter];
+	[MEMORY_FREE_LIST+[PAGE_TABLE_BASE+20*PID+2*counter]]=[MEMORY_FREE_LIST+[PAGE_TABLE_BASE+20*PID+2*counter]]+1;
+	[PAGE_TABLE_BASE+20*newPID+2*counter+1]=[PAGE_TABLE_BASE+20*PID+2*counter+1];
+	counter=counter+1;
+endwhile;
+
+//copying content of user stack of parent process to child process user stack
+alias ppid_uptr R2;
+alias cpid_uptr R3;
+
+alias counter_1 R5;
+counter_1=8;
+while(counter_1<10) do
+	ppid_uptr=[PAGE_TABLE_BASE+20*PID+2*counter_1]*512;
+	cpid_uptr=[PAGE_TABLE_BASE+20*newPID+2*counter_1]*512;
+	counter=0;
+	while(counter<512) do
+		[cpid_uptr+counter]=[ppid_uptr+counter];
+		counter=counter+1;
+	endwhile;
+	counter_1=counter_1+1;
+endwhile;
+	
+//setting up return values
+//for child process
+R4 = [PROCESS_TABLE+16*newPID+13]-1;
+[[PAGE_TABLE_BASE + 20*newPID + (R4/512)*2]*512 + (R4%512)] = 0;
+
+[[PROCESS_TABLE+16*newPID+11]*512+[PROCESS_TABLE+16*newPID+12]] = BP;
+
+//for parentProcess
+SP = [PROCESS_TABLE+16*PID+13];
+R4 = SP;
+R4 = R4 - 1;
+[[PAGE_TABLE_BASE + 20*PID + (R4/512)*2]*512 + (R4%512)] = newPID;
+
+//resetting mode flag
+[PROCESS_TABLE+16*PID+9] = 0;
+ireturn;

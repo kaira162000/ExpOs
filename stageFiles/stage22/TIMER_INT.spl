@@ -1,0 +1,22 @@
+//Change stack and backup
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 13] = SP;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 11]*512 - 1;
+backup;
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 4] = READY;
+
+alias counter R0;
+alias temp R1;
+counter = 0;
+while (counter < 16) do
+	temp = PROCESS_TABLE + counter*16;
+	[temp] = [temp] + 1;
+	counter = counter + 1;
+endwhile;
+
+
+call SCHEDULER;
+
+restore;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 13];
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 0;
+ireturn;

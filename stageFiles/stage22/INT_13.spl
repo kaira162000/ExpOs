@@ -1,0 +1,62 @@
+alias PID R0;
+alias FunNum R1;
+alias RetValAddr R2;
+
+PID = [SYSTEM_STATUS_TABLE + 1];
+FunNum = [[PAGE_TABLE_BASE+20*PID+((SP-5)/512)*2]*512+((SP-5)%512)];
+RetValAddr = [PAGE_TABLE_BASE+20*PID+((SP-1)/512)*2]*512+((SP-1)%512);
+
+[PROCESS_TABLE+16*PID+13]=SP;
+SP = [PROCESS_TABLE+16*PID+11]*512+[PROCESS_TABLE+16*PID+12];
+
+[PROCESS_TABLE+16*PID+9]=FunNum;
+
+//sem get system call
+if(FunNum == INT_SEMGET) then
+	alias counter R3;
+	counter = 0;
+	while([[PROCESS_TABLE + 16*PID + 11]*512 - 16 + counter*2] != -1 && counter <8) do
+		counter = counter +1;
+	endwhile;
+	//no free entries
+	if(counter == 8) then
+		[RetValAddr] = -1;
+		ireturn;
+	endif;
+	[[PROCESS_TABLE + 16*PID + 11]*512 - 16 + counter*2] = 1;
+	multipush(R0,R1,R2,R3);
+	R1 = 6;
+	R2 = PID;
+	call RESOURCE_MANAGER;
+	R4 = R0;
+	multipop(R0,R1,R2,R3);
+	if(R4 == -1) then
+		[RetValAddr] = -2;
+		ireturn;
+	endif;
+	[[PROCESS_TABLE + 16*PID + 11]*512 - 16 + counter*2+1] = R4;
+	[RetValAddr] = counter;
+endif;
+
+//sem release system call
+if(FunNum == INT_SEMRELEASE) then
+	alias index R3;
+	index = [[PAGE_TABLE_BASE+20*PID+((SP-4)/512)*2]*512+((SP-4)%512)];
+	//if semaphore descriptor is not valied
+	if((index > 7 || index < 0)|| ([[PROCESS_TABLE + 16*PID + 11]*512 - 16 + index*2] != 1)) then
+		[RetValAddr] = -1;
+		ireturn;
+	endif;
+	R1 = 7;
+	R2 = index;
+	R3 = PID;
+	multipush(R0,R1,R2,R3);
+	call RESOURCE_MANAGER;
+	multipop(R0,R1,R2,R3);
+	[[PROCESS_TABLE + 16*PID + 11]*512 - 16 + index*2] = -1;
+	[RetValAddr] = 0;
+endif;
+
+[PROCESS_TABLE+16*PID+9]=0;
+SP = [PROCESS_TABLE+16*PID+13];
+ireturn;

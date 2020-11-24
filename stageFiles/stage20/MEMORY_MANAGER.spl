@@ -1,0 +1,102 @@
+alias functionNum R1;
+
+//Get Free Page
+if(functionNum == 1) then
+	//Increase WAIT_MEM_COUNT
+	[SYSTEM_STATUS_TABLE + 3] = [SYSTEM_STATUS_TABLE + 3] + 1;	
+	//If MEM_FREE_COUNT is 0
+	while ([SYSTEM_STATUS_TABLE + 2] == 0) do
+		[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 4] = WAIT_MEM;
+		multipush(R1);
+		call SCHEDULER;
+		multipop(R1);
+	endwhile;
+	//Decrement WAIT_MEM_COUNT and MEM_FREE_COUNT
+	[SYSTEM_STATUS_TABLE + 3] = [SYSTEM_STATUS_TABLE + 3] - 1;
+	[SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] - 1;
+
+	//Find Free page
+	alias counter R0;
+	counter = 0;
+	while(counter < MAX_MEM_PAGE) do
+		if([MEMORY_FREE_LIST + counter] == 0) then
+			[MEMORY_FREE_LIST + counter] = 1;
+			break;
+		endif;
+		counter = counter + 1;
+	endwhile;
+	return;
+endif;
+
+//Release Page
+if(functionNum == 2) then 
+	alias pageNo R2;
+	//Decrement in MEMORY_FREE_LIST
+	[MEMORY_FREE_LIST + pageNo] = [MEMORY_FREE_LIST + pageNo] - 1;
+	if([MEMORY_FREE_LIST + pageNo] == 0) then
+		//Update MEM_FREE_COUNT
+		[SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] + 1;
+
+		//Change WAIT_MEM to READY
+		alias counter R10;
+		counter = 0;
+		while(counter < MAX_PROC_NUM) do
+			if([PROCESS_TABLE + counter*16 + 4] == WAIT_MEM) then
+				[PROCESS_TABLE + counter*16 + 4] = READY;
+			endif;
+			counter = counter + 1;
+		endwhile;
+	endif;
+	return;
+endif;
+
+//release block
+if(functionNum == 4) then
+	alias blockNum R2;
+	[DISK_FREE_LIST+blockNum]=[DISK_FREE_LIST+blockNum]-1;
+	return;
+endif;
+
+//Get Code Page
+if(functionNum == 5) then
+	alias blockNum R2;
+	alias counter R3;
+	alias temp R4;
+	alias temp1 R5;
+	temp1=-1;
+	counter=0;
+	//check if any process has that pre loaded that block to any, if yes return that page number
+	while(counter<16) do
+		temp=2;
+		while(temp<10) do
+			if([DISK_MAP_TABLE+counter*10+temp]==blockNum && [PAGE_TABLE_BASE+20*counter+2*temp]!=-1) then
+				temp1=[PAGE_TABLE_BASE+20*counter+2*temp];
+				[MEMORY_FREE_LIST+temp1]=[MEMORY_FREE_LIST+temp1]+1;
+				break;
+			endif;
+			temp=temp+1;
+		endwhile;
+		if(temp1!=-1) then
+			break;
+		endif;
+		counter=counter+1;
+	endwhile;
+	if(temp1!=-1) then
+		R0=temp1;
+		return;
+	endif;
+	//if no, call get free page and call disk load fun and return tht page num
+	multipush(R2);
+	R1=1;
+	call MEMORY_MANAGER;
+	multipop(R2);
+	alias FreePage R0;
+	multipush(R0);
+	R1=2;
+	R4=blockNum;
+	R2=[SYSTEM_STATUS_TABLE+1];
+	R3=FreePage;
+	call DEVICE_MANAGER;
+	multipop(R0);
+	return;
+endif;
